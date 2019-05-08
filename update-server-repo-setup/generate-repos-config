@@ -1,0 +1,211 @@
+#!/usr/bin/env python3
+
+# Copyright 2019 SUSE LLC
+#
+# This file is part of update-server-repo-setup
+#
+# update-server-repo-setup is free software: you can redistribute it
+# and/or modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation, either version 3 of
+# the License, or (at your option) any later version.
+#
+# update-server-repo-setup is distributed in the hope that it will be
+# useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with update-server-repo-setup.
+# If not, see <http://www.gnu.org/licenses/>.
+
+import argparse
+import json
+import re
+import requests
+import sys
+
+from requests.auth import HTTPBasicAuth
+
+
+class RepoConfigGenerator:
+    def __init__(self, username, password, product_config_file, verbose=False):
+        self.username = username
+        self.password = password
+        self.product_config_file = product_config_file
+        self.verbose = verbose
+
+    def make_products_list(self):
+        config_json = open(self.product_config_file, 'r').read()
+        config = json.loads(config_json)
+
+        products = {}
+        consistency_err_msg = 'No %s specified for config with comment "%s"'
+        for item in config:
+            comment = item.get('comment')
+            identifiers = item.get('products')
+            if not identifiers:
+                print(
+                    consistency_err_msg % ('products', comment),
+                    file=sys.stderr
+                )
+                break
+            versions = item.get('versions')
+            if not versions:
+                print(
+                    consistency_err_msg % ('versions', comment),
+                    file=sys.stderr
+                )
+                break
+            arches = item.get('arches')
+            if not arches:
+                print(
+                    consistency_err_msg % ('arches', comment),
+                    file=sys.stderr
+                )
+                break
+            for identifier in identifiers:
+                for version in versions:
+                    for target in arches:
+                        framework = None
+                        target_info = target.split(':', 1)
+                        arch = target_info[0]
+                        if len(target_info) > 1:
+                            framework = target_info[1]
+                        triplet = (
+                            '%s/%s/%s' % (identifier, version, arch)
+                        ).lower()
+                        
+                        products[triplet] = {
+                            'additional_repos': item.get('additional_repos'),
+                            'framework': framework
+                        }
+        
+        return products
+
+    def get_scc_products(
+            self,
+            url='https://scc.suse.com/connect/organizations/products/unscoped',
+            result = {}
+    ):
+        """Recursive in order to retrieve all products from SCC. The SCC
+           output is paginated"""
+        if self.verbose:
+            print('Getting products from "%s"' % url)
+        res = requests.get(
+            url, auth=HTTPBasicAuth(self.username, self.password)
+        )
+        if res.status_code != 200:
+            print(
+                'Unable to obtain products list for user "%s"' % self.username,
+                file=sys.stderr
+            )
+            print('Https return code: "%s"' % res.status_code, file=sys.stderr)
+            print('Error: "%s"' % res.reason, file=sys.stderr)
+            return result
+
+        products = json.loads(res.text)
+        for product in products:
+            if not product.get('arch'):
+                continue # SLES 9 or some other ancient product
+            triplet = (
+                product.get('identifier') + '/' +
+                product.get('version') + '/' +
+                product.get('arch')
+            ).lower()
+            if self.verbose:
+                print('Adding data for: "%s"' % triplet)
+            result[triplet] = product['repositories']
+
+        # Get the next set of products from the next page
+        match = re.search( r'<([^>]*)>; rel="next"', res.headers.get('Link'))
+        if match:
+            self.get_scc_products(match.group(1), result)
+        
+        return result
+
+    # Generates a list of repo IDs to be enabled/checked by monitoring
+    def make_repos_list(self):
+        config_products = self.make_products_list()
+        scc_products = self.get_scc_products()
+        
+        result = {}
+        for triplet, product_settings in config_products.items():
+            scc_product = scc_products.get(triplet)
+            if not scc_product:
+                msg = 'WARNING: Configured product "%s" not provided by SCC. '
+                msg += 'Skipping product.'
+                print(msg % triplet)
+                continue
+            
+            for repo in scc_product:
+                fs_location = repo['url'].split('suse.com')[-1]
+                if (repo['enabled']):
+                    if self.verbose:
+                        print('Adding mandatory repo "%s"' % repo['name'])
+                    result[repo['id']] = {
+                        'description': repo['description'],
+                        'framework': product_settings['framework'],
+                        'location': fs_location
+                    }
+                else:
+                    additional_repos = product_settings['additional_repos']
+                    for additional_repo in additional_repos:
+                        if additional_repo in repo['name']:
+                            if self.verbose:
+                                msg = 'Adding additional repo "%s"'
+                                print(msg % repo['name'])
+                            result[repo['id']] = {
+                                'description': repo['description'],
+                                'framework': product_settings['framework'],
+                                'location': fs_location
+                            }
+        
+        return result
+
+argparse = argparse.ArgumentParser(
+    description='Generate repository list from SCC data based on json '\
+    'configuration'
+)
+argparse.add_argument(
+    '-i', '--in-file',
+    default='./product_config.json',
+    dest='product_config_file',
+    help='The json configuration file to generate product definitions.',
+    metavar='PRODUCT_CONFIG_FILE'
+)
+argparse.add_argument(
+    '-o', '--out-file',
+    default='./rmt_repository_config.json',
+    dest='repo_config_file',
+    help='The generated json repository configuration file.',
+    metavar='REPO_CONFIG_FILE'
+)
+argparse.add_argument(
+    '-u', '--username',
+    dest='username',
+    help='SCC username',
+    metavar='USERNAME'
+)
+argparse.add_argument(
+    '-p', '--password',
+    dest='password',
+    help='SCC password',
+    metavar='PASSWORD'
+)
+argparse.add_argument(
+    '-v' , '--verbose',
+    dest='verbose',
+    action='store_true',
+    default=False,
+    help='Print information about actions to stdout',
+)
+
+args = argparse.parse_args()
+
+generator = RepoConfigGenerator(
+    args.username, args.password, args.product_config_file, args.verbose
+)
+
+repos = generator.make_repos_list()
+with open(args.repo_config_file, 'w') as outfile:
+    json.dump(repos, outfile, indent=4)

@@ -1,0 +1,63 @@
+[
+  {
+    "comment": "SLES12 base products",
+    "products": [
+      "SLES",
+      "SLES_SAP"
+    ],
+    "versions": [ "12", "12.1",  ],
+    "arches": [ "x86_64" ],
+      "additional_repos": [ "Debuginfo"]
+  },
+  {
+    "comment": "SLES12 modules (12 modules don't have service packs)",
+    "products": [
+      "SLE-Module-Adv-Systems-Management",
+      "SLE-Module-Certifications",
+      "SLE-Module-Containers",
+      "SLE-Module-HPC",
+      "SLE-Module-Legacy",
+      "SLE-Module-Public-Cloud",
+      "SLE-Module-Toolchain",
+      "SLE-Module-Web-Scripting",
+      "SLE-Module-CAP-Tools"
+    ],
+    "versions": [ "12" ],
+    "arches": [ "x86_64" ],
+      "additional_repos": [ "Debuginfo" ]
+  },
+  {
+    "comment": "SLES15 products",
+    "products": [
+      "SLES",
+      "SLES_SAP",
+      "SLE-Module-Basesystem",
+      "SLE-Module-Containers",
+      "SLE-Module-Development-Tools",
+      "SLE-Module-Legacy",
+      "SLE-Module-Public-Cloud",
+      "SLE-Module-SAP-Applications",
+      "SLE-Module-Server-Applications",
+      "SLE-Module-Web-Scripting",
+      "SLE-Module-CAP-Tools"
+    ],
+    "versions": [ "15" ],
+    "arches": [ "x86_64" ],
+    "additional_repos": [ "Debuginfo" ]
+  },
+  {
+    "comment": "SLES15 for aarch64 -- without Containers module (!) and CAP tools (!) as these aren't available for aarch64",
+    "products": [
+      "SLES",
+      "SLE-Module-Basesystem",
+      "SLE-Module-Development-Tools",
+      "SLE-Module-Legacy",
+      "SLE-Module-Public-Cloud",
+      "SLE-Module-Server-Applications",
+      "SLE-Module-Web-Scripting"
+    ],
+    "versions": [ "15" ],
+    "arches": [ "aarch64:ec2" ],
+    "additional_repos": [ "Debuginfo"]
+  }
+]

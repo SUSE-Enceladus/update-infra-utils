@@ -1,0 +1,106 @@
+#!/usr/bin/python3
+
+# Copyright 2019 SUSE LLC
+#
+# This file is part of update-server-repo-setup
+#
+# update-server-repo-setup is free software: you can redistribute it
+# and/or modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation, either version 3 of
+# the License, or (at your option) any later version.
+#
+# update-server-repo-setup is distributed in the hope that it will be
+# useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with update-server-repo-setup.
+# If not, see <http://www.gnu.org/licenses/>.
+#
+
+import argparse
+import json
+import os
+import sys
+
+# Set up command line argument parsing
+argparse = argparse.ArgumentParser(
+    description='Script to enable repositorries to mirror'
+)
+argparse.add_argument(
+    '-d', '--dry-run',
+    action='store_true',
+    default=False,
+    dest='dry_run',
+    help='Do not perform any action',
+)
+argparse.add_argument(
+    '-f', '--file',
+    default='/etc/rmt-utils/rmt_repository_config.json',
+    dest='config_file',
+    help='The json configuration file',
+    metavar='CONFIGFILE'
+)
+argparse.add_argument(
+    '-l', '--log',
+    dest='log_file',
+    help='The logfile path, including name, default is stdout',
+    metavar='LOGFILE'
+)
+argparse.add_argument(
+    '--verbose',
+    action='store_true',
+    default=False,
+    dest='verbose',
+    help='Verbose progress information',
+)
+
+args = argparse.parse_args()
+
+if not args.dry_run and os.getuid() != 0:
+    print('Script must be run as root', file=sys.stderr)
+    sys.exit(1)
+
+# Dry run implies verbose
+if args.dry_run:
+    args.verbose = True
+
+config = open(args.config_file,'r').read()
+mirror_info = json.loads(config)
+
+log = sys.stdout
+if args.log_file:
+    log = open(args.log_file, 'w')
+
+enabled = []
+
+# Get the available products from RMT
+if not args.dry_run:
+    if not os.path.exists('/usr/bin/rmt-cli'):
+        print(
+            'rmt-cli command not found in /usr/bin cannot enable repositories',
+            file=sys.stderr
+        )
+        sys.exit(1)
+
+# Use markers in our RMT images to figure out the framework
+framework = None
+if os.path.exists('/usr/bin/ec2metadata'):
+    framework = 'ec2'
+elif os.path.exists('/usr/bin/azuremetadata'):
+    framework = 'azure'
+elif os.path.exists('/usr/bin/gcemetadata'):
+    framework = 'gce'
+
+for product_id, product_info in mirror_info.items():
+    enable_framework = product_info.get('framework')
+    if not framework or framework == enable_framework:
+        if args.verbose:
+            log.write('Enable product with id "%s"\n' % product_id)
+            log.write('\t%s\n' % product_info.get('description'))
+        if not args.dry_run:
+            os.system('rmt-cli repos enable %s' % product_id)    
+
+if args.log_file:
+    log.close()
