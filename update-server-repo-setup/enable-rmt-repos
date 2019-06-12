@@ -95,7 +95,7 @@ elif os.path.exists('/usr/bin/gcemetadata'):
 
 for product_id, product_info in mirror_info.items():
     enable_framework = product_info.get('framework')
-    if not framework or framework == enable_framework:
+    if not enable_framework or framework == enable_framework:
         if args.verbose:
             log.write('Enable product with id "%s"\n' % product_id)
             log.write('\t%s\n' % product_info.get('description'))
