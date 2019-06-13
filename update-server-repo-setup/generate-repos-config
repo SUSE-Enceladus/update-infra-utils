@@ -67,10 +67,13 @@ class RepoConfigGenerator:
                 for version in versions:
                     for target in arches:
                         framework = None
-                        target_info = target.split(':', 1)
-                        arch = target_info[0]
-                        if len(target_info) > 1:
-                            framework = target_info[1]
+                        if target:
+                            target_info = target.split(':', 1)
+                            arch = target_info[0]
+                            if len(target_info) > 1:
+                                framework = target_info[1]
+                        else:
+                            arch = ''
                         triplet = (
                             '%s/%s/%s' % (identifier, version, arch)
                         ).lower()
@@ -106,7 +109,7 @@ class RepoConfigGenerator:
         products = json.loads(res.text)
         for product in products:
             if not product.get('arch'):
-                continue # SLES 9 or some other ancient product
+                product['arch'] = '' # SLES 11 modules and other ancient products
             triplet = (
                 product.get('identifier') + '/' +
                 product.get('version') + '/' +
