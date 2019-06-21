@@ -93,14 +93,15 @@ elif os.path.exists('/usr/bin/azuremetadata'):
 elif os.path.exists('/usr/bin/gcemetadata'):
     framework = 'gce'
 
-for product_id, product_info in mirror_info.items():
-    enable_framework = product_info.get('framework')
-    if not enable_framework or framework == enable_framework:
-        if args.verbose:
-            log.write('Enable product with id "%s"\n' % product_id)
-            log.write('\t%s\n' % product_info.get('description'))
-        if not args.dry_run:
-            os.system('rmt-cli repos enable %s' % product_id)    
+for entry in mirror_info:
+    for product_id, product_info in entry.items():
+        enable_framework = product_info.get('framework')
+        if not enable_framework or framework == enable_framework:
+            if args.verbose:
+                log.write('Enable product with id "%s"\n' % product_id)
+                log.write('\t%s\n' % product_info.get('description'))
+            if not args.dry_run:
+                os.system('rmt-cli repos enable %s' % product_id)    
 
 if args.log_file:
     log.close()
