@@ -16,7 +16,7 @@
 #
 
 Name:           enable-rmt-repos
-Version:        3.0.0
+Version:        3.0.1
 Release:        0
 Summary:        RMT repository enablement
 License:        GPL-3.0+
