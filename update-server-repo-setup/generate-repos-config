@@ -50,7 +50,7 @@ class RepoConfigGenerator:
         config_json = open(self.product_config_file, 'r').read()
         config = json.loads(config_json)
 
-        products = {}
+        products = []
         consistency_err_msg = 'No %s specified for config with comment "%s"'
         for item in config:
             comment = item.get('comment')
@@ -89,12 +89,14 @@ class RepoConfigGenerator:
                         triplet = (
                             '%s/%s/%s' % (identifier, version, arch)
                         ).lower()
-                        
-                        products[triplet] = {
-                            'additional_repos': item.get('additional_repos'),
-                            'exclusions': item.get('exclusions'),
-                            'framework': framework
-                        }
+                        products.append({
+                            triplet: {
+                                'additional_repos':
+                                item.get('additional_repos'),
+                                'exclusions': item.get('exclusions'),
+                                'framework': framework
+                            }
+                        })
         
         return products
 
@@ -144,42 +146,48 @@ class RepoConfigGenerator:
         config_products = self.make_products_list()
         scc_products = self.get_scc_products()
         
-        result = {}
-        for triplet, product_settings in config_products.items():
-            exclusions = product_settings.get('exclusions')
-            scc_product = scc_products.get(triplet)
-            if not scc_product:
-                msg = 'WARNING: Configured product "%s" not provided by SCC. '
-                msg += 'Skipping product.'
-                print(msg % triplet)
-                continue
-            
-            for repo in scc_product:
-                fs_location = repo['url'].split('suse.com')[-1]
-                repo_name = repo['name']
-                skip = False
-                if (repo['enabled']):
-                    if self._add_repo(repo_name, exclusions):
-                        if self.verbose:
-                            print('Adding mandatory repo "%s"' % repo_name)
-                        result[repo['id']] = {
-                            'description': repo['description'],
-                            'framework': product_settings['framework'],
-                            'location': fs_location
-                        }
-                else:
-                    additional_repos = product_settings['additional_repos']
-                    for additional_repo in additional_repos:
+        result = []
+        for config_product in config_products:
+            for triplet, product_settings in config_product.items():
+                exclusions = product_settings.get('exclusions')
+                framework = product_settings['framework']
+                scc_product = scc_products.get(triplet)
+                if not scc_product:
+                    msg = 'WARNING: Configured product "%s" not provided '
+                    msg += 'by SCC. Skipping product.'
+                    print(msg % triplet)
+                    continue
+                
+                for repo in scc_product:
+                    fs_location = repo['url'].split('suse.com')[-1]
+                    repo_name = repo['name']
+                    skip = False
+                    if (repo['enabled']):
                         if self._add_repo(repo_name, exclusions):
-                            if additional_repo in repo_name:
-                                if self.verbose:
-                                    msg = 'Adding additional repo "%s"'
-                                    print(msg % repo_name)
-                                result[repo['id']] = {
+                            if self.verbose:
+                                print('Adding mandatory repo "%s"' % repo_name)
+                            result.append({
+                                repo['id']: {
                                     'description': repo['description'],
-                                    'framework': product_settings['framework'],
+                                    'framework': framework,
                                     'location': fs_location
                                 }
+                            })
+                    else:
+                        additional_repos = product_settings['additional_repos']
+                        for additional_repo in additional_repos:
+                            if self._add_repo(repo_name, exclusions):
+                                if additional_repo in repo_name:
+                                    if self.verbose:
+                                        msg = 'Adding additional repo "%s"'
+                                        print(msg % repo_name)
+                                    result.append({
+                                        repo['id']: {
+                                            'description': repo['description'],
+                                            'framework': framework,
+                                            'location': fs_location
+                                        }
+                                    })
         
         return result
 
