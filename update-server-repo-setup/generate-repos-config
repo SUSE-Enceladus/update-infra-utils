@@ -34,14 +34,14 @@ class RepoConfigGenerator:
         self.product_config_file = product_config_file
         self.verbose = verbose
 
-    def _add_repo(self, repo_name, exclusions):
+    def _add_repo(self, repo_desc, exclusions):
         """Process configured exclusions"""
         if not exclusions:
             return True
         for entry in exclusions:
-            if entry in repo_name:
+            if entry in repo_desc:
                 if self.verbose:
-                    print('Skipping excluded repo "%s"' %repo_name)
+                    print('Skipping excluded repo "%s"' % repo_desc)
                 return False
 
         return True
@@ -160,15 +160,15 @@ class RepoConfigGenerator:
                 
                 for repo in scc_product:
                     fs_location = repo['url'].split('suse.com')[-1]
-                    repo_name = repo['name']
+                    repo_desc = repo['description']
                     skip = False
                     if (repo['enabled']):
-                        if self._add_repo(repo_name, exclusions):
+                        if self._add_repo(repo_desc, exclusions):
                             if self.verbose:
-                                print('Adding mandatory repo "%s"' % repo_name)
+                                print('Adding mandatory repo "%s"' % repo_desc)
                             result.append({
                                 repo['id']: {
-                                    'description': repo['description'],
+                                    'description': repo_desc,
                                     'framework': framework,
                                     'location': fs_location
                                 }
@@ -176,11 +176,11 @@ class RepoConfigGenerator:
                     else:
                         additional_repos = product_settings['additional_repos']
                         for additional_repo in additional_repos:
-                            if self._add_repo(repo_name, exclusions):
-                                if additional_repo in repo_name:
+                            if self._add_repo(repo_desc, exclusions):
+                                if additional_repo in repo_desc:
                                     if self.verbose:
                                         msg = 'Adding additional repo "%s"'
-                                        print(msg % repo_name)
+                                        print(msg % repo_desc)
                                     result.append({
                                         repo['id']: {
                                             'description': repo['description'],
