@@ -28,6 +28,14 @@ import sys
 argparse = argparse.ArgumentParser(
     description='Script to enable repositorries to mirror'
 )
+help_msg = 'A designator that will be used to enable repos that have been '
+help_msg += 'setup to be enabled on a specific framework. Must match the '
+help_msg + 'name used in the configuration exactly'
+argparse.add_argument(
+    '--cloud',
+    dest='framework',
+    help=help_msg
+)
 argparse.add_argument(
     '-d', '--dry-run',
     action='store_true',
@@ -85,19 +93,15 @@ if not args.dry_run:
         sys.exit(1)
 
 # Use markers in our RMT images to figure out the framework
-framework = None
-if os.path.exists('/usr/bin/ec2metadata'):
-    framework = 'ec2'
-elif os.path.exists('/usr/bin/azuremetadata'):
-    framework = 'azure'
-elif os.path.exists('/usr/bin/gcemetadata'):
-    framework = 'gce'
+framework_to_use = None
+if args.framework:
+    framework_to_use = args.framework
 
 all_repo_ids = []
 for entry in mirror_info:
     for repository_id, repository_info in entry.items():
         enable_framework = repository_info.get('framework')
-        if not enable_framework or framework == enable_framework:
+        if not enable_framework or enable_framework == framework_to_use:
             if args.verbose:
                 log.write('Enable repository with id "%s"\n' % repository_id)
                 log.write('\t%s\n' % repository_info.get('description'))
