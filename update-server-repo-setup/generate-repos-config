@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright 2019 SUSE LLC
+# Copyright 2020 SUSE LLC
 #
 # This file is part of update-server-repo-setup
 #
@@ -161,7 +161,6 @@ class RepoConfigGenerator:
                 for repo in scc_product:
                     fs_location = repo['url'].split('suse.com')[-1]
                     repo_desc = repo['description']
-                    skip = False
                     if (repo['enabled']):
                         if self._add_repo(repo_desc, exclusions):
                             if self.verbose:
@@ -236,5 +235,32 @@ generator = RepoConfigGenerator(
 )
 
 repos = generator.make_repos_list()
+# We want a sorted representation to aid with diff generation
+product_ids = []
+for repo_data in repos:
+    product_ids.append(list(repo_data.keys())[0])
+# Using the awkward Python sorting for strings that are numeric in nature
+# is sufficient for our purposes and saves us a bunch of type casting
+product_ids.sort()
+sorted_repos = []
+mirroring = {'all': []}
+# n^2 loop but we expect a reasonably small data volume
+for product_id in product_ids:
+    for repo_data in repos:
+        mirroring_index = 'all'
+        if list(repo_data.keys())[0] == product_id:
+            if repo_data[product_id].get('framework'):
+                mirroring_index = repo_data[product_id].get('framework')
+            if not mirroring.get(mirroring_index):
+                mirroring[mirroring_index] = []
+
+            # 'all' gets looked up twice at times
+            if (
+                    product_id not in mirroring['all'] and
+                    product_id not in mirroring[mirroring_index]
+            ):
+                mirroring[mirroring_index].append(product_id)
+                sorted_repos.append(repo_data)
+
 with open(args.repo_config_file, 'w') as outfile:
-    json.dump(repos, outfile, indent=4)
+    json.dump(sorted_repos, outfile, indent=4)
