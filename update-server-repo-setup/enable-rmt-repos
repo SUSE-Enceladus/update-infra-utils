@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-# Copyright 2019 SUSE LLC
+# Copyright 2021 SUSE LLC
 #
 # This file is part of update-server-repo-setup
 #
@@ -98,15 +98,15 @@ if args.framework:
     framework_to_use = args.framework
 
 all_repo_ids = []
-for entry in mirror_info:
-    for repository_id, repository_info in entry.items():
-        enable_framework = repository_info.get('framework')
-        if not enable_framework or enable_framework == framework_to_use:
-            if args.verbose:
-                log.write('Enable repository with id "%s"\n' % repository_id)
-                log.write('\t%s\n' % repository_info.get('description'))
-            if not args.dry_run:
-                all_repo_ids.append(repository_id)
+for repository_info in mirror_info:
+    repository_id = repository_info.get('id')
+    enable_framework = repository_info.get('framework')
+    if not enable_framework or enable_framework == framework_to_use:
+        if args.verbose:
+            log.write('Enable repository with id "%s"\n' % repository_id)
+            log.write('\t%s\n' % repository_info.get('description'))
+        if not args.dry_run:
+            all_repo_ids.append(repository_id)
 
 if all_repo_ids:
     os.system('rmt-cli repos enable %s' % ' '.join(all_repo_ids))

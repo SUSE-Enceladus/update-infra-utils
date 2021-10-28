@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright 2020 SUSE LLC
+# Copyright 2021 SUSE LLC
 #
 # This file is part of update-server-repo-setup
 #
@@ -164,14 +164,17 @@ class RepoConfigGenerator:
                     if (repo['enabled']):
                         if self._add_repo(repo_desc, exclusions):
                             if self.verbose:
-                                print('Adding mandatory repo "%s"' % repo_desc)
-                            result.append({
-                                repo['id']: {
+                                msg = 'Adding mandatory repo "%s" with '
+                                msg += 'product id "%s"'
+                                print(msg % (repo_desc, repo['id']))
+                            result.append(
+                                {
+                                    'id': repo['id'],
                                     'description': repo_desc,
                                     'framework': framework,
                                     'location': fs_location
                                 }
-                            })
+                            )
                     else:
                         additional_repos = product_settings['additional_repos']
                         for additional_repo in additional_repos:
@@ -180,13 +183,14 @@ class RepoConfigGenerator:
                                     if self.verbose:
                                         msg = 'Adding additional repo "%s"'
                                         print(msg % repo_desc)
-                                    result.append({
-                                        repo['id']: {
+                                    result.append(
+                                        {
+                                            'id': repo['id'],
                                             'description': repo['description'],
                                             'framework': framework,
                                             'location': fs_location
                                         }
-                                    })
+                                    )
         
         return result
 
@@ -238,7 +242,7 @@ repos = generator.make_repos_list()
 # We want a sorted representation to aid with diff generation
 product_ids = []
 for repo_data in repos:
-    product_ids.append(list(repo_data.keys())[0])
+    product_ids.append(repo_data.get('id'))
 # Using the awkward Python sorting for strings that are numeric in nature
 # is sufficient for our purposes and saves us a bunch of type casting
 product_ids.sort()
@@ -248,9 +252,9 @@ mirroring = {'all': []}
 for product_id in product_ids:
     for repo_data in repos:
         mirroring_index = 'all'
-        if list(repo_data.keys())[0] == product_id:
-            if repo_data[product_id].get('framework'):
-                mirroring_index = repo_data[product_id].get('framework')
+        if repo_data.get('id') == product_id:
+            if repo_data.get('framework'):
+                mirroring_index = repo_data.get('framework')
             if not mirroring.get(mirroring_index):
                 mirroring[mirroring_index] = []
 
