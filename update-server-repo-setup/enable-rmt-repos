@@ -106,7 +106,7 @@ for repository_info in mirror_info:
             log.write('Enable repository with id "%s"\n' % repository_id)
             log.write('\t%s\n' % repository_info.get('description'))
         if not args.dry_run:
-            all_repo_ids.append(repository_id)
+            all_repo_ids.append(str(repository_id))
 
 if all_repo_ids:
     os.system('rmt-cli repos enable %s' % ' '.join(all_repo_ids))
