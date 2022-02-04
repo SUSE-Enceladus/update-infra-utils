@@ -108,25 +108,19 @@ for repository_info in mirror_info:
 if all_repo_ids:
     chunk_cnt = 0
     status = 0
-    last = False
     repo_cnt = 30
     # Chunk the numbers of repos we enable at one time into 30
     # 30 is an arbitrary number
     while 1:
-        if len(all_repo_ids) < 30:
-            enable_repos = all_repo_ids
-            last = True
-        else:
-            if chunk_cnt*repo_cnt+repo_cnt < len(all_repo_ids):
-                enable_repos = all_repo_ids[
-                    chunk_cnt*repo_cnt:chunk_cnt*repo_cnt+repo_cnt]
-            else:
-                enable_repos = all_repo_ids[chunk_cnt*repo_cnt:]
-                last = True
-        chunk_cnt += 1
+        # Turns out Python throws no index error when the last index of a
+        # slice is out of bounds, go figure
+        enable_repos = all_repo_ids[
+            chunk_cnt*repo_cnt:chunk_cnt*repo_cnt+repo_cnt
+        ]
         status += os.system('rmt-cli repos enable %s' % ' '.join(enable_repos))
-        if last:
+        if (chunk_cnt*repo_cnt+repo_cnt) >= len(all_repo_ids):
             break
+        chunk_cnt += 1
 
     if status:
         print('ERROR: Not all configured repos enabled')
