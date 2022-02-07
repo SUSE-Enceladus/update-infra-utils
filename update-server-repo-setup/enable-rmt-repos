@@ -81,9 +81,6 @@ log = sys.stdout
 if args.log_file:
     log = open(args.log_file, 'w')
 
-enabled = []
-
-# Get the available products from RMT
 if not args.dry_run:
     if not os.path.exists('/usr/bin/rmt-cli'):
         print(
@@ -109,7 +106,24 @@ for repository_info in mirror_info:
             all_repo_ids.append(str(repository_id))
 
 if all_repo_ids:
-    os.system('rmt-cli repos enable %s' % ' '.join(all_repo_ids))
+    chunk_cnt = 0
+    status = 0
+    repo_cnt = 30
+    # Chunk the numbers of repos we enable at one time into 30
+    # 30 is an arbitrary number
+    while 1:
+        # Turns out Python throws no index error when the last index of a
+        # slice is out of bounds, go figure
+        enable_repos = all_repo_ids[
+            chunk_cnt*repo_cnt:chunk_cnt*repo_cnt+repo_cnt
+        ]
+        status += os.system('rmt-cli repos enable %s' % ' '.join(enable_repos))
+        if (chunk_cnt*repo_cnt+repo_cnt) >= len(all_repo_ids):
+            break
+        chunk_cnt += 1
+
+    if status:
+        print('ERROR: Not all configured repos enabled')
 
 if args.log_file:
     log.close()
