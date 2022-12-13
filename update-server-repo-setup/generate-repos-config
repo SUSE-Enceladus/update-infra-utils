@@ -145,7 +145,7 @@ class RepoConfigGenerator:
     def make_repos_list(self):
         config_products = self.make_products_list()
         scc_products = self.get_scc_products()
-        
+
         result = []
         for config_product in config_products:
             for triplet, product_settings in config_product.items():
@@ -157,41 +157,42 @@ class RepoConfigGenerator:
                     msg += 'by SCC. Skipping product.'
                     print(msg % triplet)
                     continue
-                
+
                 for repo in scc_product:
                     fs_location = repo['url'].split('suse.com')[-1]
                     repo_desc = repo['description']
-                    if (repo['enabled']):
-                        if self._add_repo(repo_desc, exclusions):
+                    if self._add_repo(repo_desc, exclusions):
+                        repo_id = repo['id']
+                        if repo['enabled']:
                             if self.verbose:
                                 msg = 'Adding mandatory repo "%s" with '
                                 msg += 'product id "%s"'
-                                print(msg % (repo_desc, repo['id']))
+                                print(msg % (repo_desc, repo_id))
                             result.append(
                                 {
-                                    'id': repo['id'],
+                                    'id': repo_id,
                                     'description': repo_desc,
                                     'framework': framework,
                                     'location': fs_location
                                 }
                             )
-                    else:
-                        additional_repos = product_settings['additional_repos']
-                        for additional_repo in additional_repos:
-                            if self._add_repo(repo_desc, exclusions):
+                        else:
+                            additional_repos = \
+                                product_settings['additional_repos']
+                            for additional_repo in additional_repos:
                                 if additional_repo in repo_desc:
                                     if self.verbose:
                                         msg = 'Adding additional repo "%s"'
                                         print(msg % repo_desc)
                                     result.append(
                                         {
-                                            'id': repo['id'],
-                                            'description': repo['description'],
+                                            'id': repo_id,
+                                            'description': repo_desc,
                                             'framework': framework,
                                             'location': fs_location
                                         }
                                     )
-        
+
         return result
 
 argparse = argparse.ArgumentParser(
