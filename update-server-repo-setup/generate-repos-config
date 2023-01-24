@@ -159,7 +159,7 @@ class RepoConfigGenerator:
                     continue
                 
                 for repo in scc_product:
-                    fs_location = repo['url'].split('suse.com')[-1]
+                    fs_location = repo['url'].split('.com')[-1]
                     repo_desc = repo['description']
                     if (repo['enabled']):
                         if self._add_repo(repo_desc, exclusions):
