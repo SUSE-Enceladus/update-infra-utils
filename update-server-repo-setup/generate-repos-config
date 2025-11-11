@@ -180,7 +180,9 @@ class RepoConfigGenerator:
                                 }
                             )
                     else:
-                        additional_repos = product_settings['additional_repos']
+                        additional_repos = product_settings.get(
+                            'additional_repos', []
+                        )
                         for additional_repo in additional_repos:
                             if self._add_repo(repo_desc, exclusions):
                                 if additional_repo in repo_desc:
