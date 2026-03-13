@@ -176,7 +176,8 @@ class RepoConfigGenerator:
                                     'id': repo['id'],
                                     'description': repo_desc,
                                     'framework': framework,
-                                    'location': fs_location
+                                    'location': fs_location,
+                                    'url': repo['url']
                                 }
                             )
                     else:
@@ -194,7 +195,8 @@ class RepoConfigGenerator:
                                             'id': repo['id'],
                                             'description': repo['description'],
                                             'framework': framework,
-                                            'location': fs_location
+                                            'location': fs_location,
+                                            'url': repo['url']
                                         }
                                     )
         
